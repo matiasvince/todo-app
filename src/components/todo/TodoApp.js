@@ -1,79 +1,115 @@
-import React, { useEffect, useRef, useState } from "react"
-import { MdOutlineDelete } from "react-icons/md"
-import { AiOutlineEdit } from "react-icons/ai"
+import React, { useEffect, useState } from "react"
+import { EditOutlined, DeleteOutlined, ExclamationCircleOutlined } from "@ant-design/icons"
+import { Table, Button, Modal, Input } from 'antd'
 
 
 const TodoApp = () => {
 
-    const [items, setItems] = useState([]);
-    const [itemEdit, setItemEdit] = useState({ 'index': null, 'item': null });
-    // const [itemEditIndex, setItemEditIndex] = useState(null);
-    const itemInputRef = useRef();
+    const [personas, setPersonas] = useState([]);
+    const [personaEdit, setPersonaEdit] = useState({ 'index': null, 'nombre': null, 'email': null, 'direccion': null });
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [inputRef, setInputRef] = useState({ 'nombre': null, 'email': null, 'direccion': null })
 
     useEffect(() => {
-        itemInputRef.current.value = itemEdit.item;
-    }, [itemEdit])
+        setInputRef({ 'nombre': personaEdit.nombre, 'email': personaEdit.email, 'direccion': personaEdit.direccion })
+        if (isEditing) {
+            setIsModalVisible(true);
+        }
+    }, [personaEdit])
 
     useEffect(() => {
-        const listadoLocalStorage = JSON.parse(localStorage.getItem('items-historial'));
+        const listadoLocalStorage = JSON.parse(localStorage.getItem('personas-historial'));
         if (listadoLocalStorage) {
-            setItems(listadoLocalStorage);
+            setPersonas(listadoLocalStorage);
         }
     }, []);
 
     useEffect(() => {
-        localStorage.setItem('items-historial', JSON.stringify(items));
-    }, [items]);
+        localStorage.setItem('personas-historial', JSON.stringify(personas));
+    }, [personas]);
 
-    const agregarItem = () => {
-        const items2 = [...items, itemInputRef.current.value];
-        setItems(items2);
-        itemInputRef.current.value = '';
+    const agregarPersona = () => {
+        const personas2 = [...personas, { 'nombre': inputRef.nombre, 'email': inputRef.email, 'direccion': inputRef.direccion }];
+        setPersonas(personas2);
+        setIsModalVisible(false);
+        setInputRef({ 'nombre': null, 'email': null, 'direccion': null })
     }
 
-    const editarItem = () => {
-        const items2 = [...items];
-        items2[itemEdit.index] = itemInputRef.current.value;
-        setItems(items2);
-        setItemEdit({ 'index': null, 'item': null });
+    const editarPersona = () => {
+        const personas2 = [...personas];
+        personas2[personaEdit.index] = { 'nombre': inputRef.nombre, 'email': inputRef.email, 'direccion': inputRef.direccion };
+        setPersonas(personas2);
+        setPersonaEdit({ 'index': null, 'nombre': null, 'email': null, 'direccion': null });
+        setIsEditing(false);
+        setIsModalVisible(false);
     }
 
-    const eliminarItem = (index) => {
-        const items2 = [...items];
-        items2.splice(index, 1);
-        setItems(items2);
+    const eliminarPersona = (index) => {
+        Modal.confirm({
+            title: 'Está seguro de eliminar esta persona?',
+            icon: <ExclamationCircleOutlined />,
+            content: '',
+            onOk() {
+                const personas2 = [...personas];
+                personas2.splice(index, 1);
+                setPersonas(personas2);
+            },
+            onCancel() {
+            },
+        });
+
+
     }
-
-
-    let icon_style = { fontSize: "1.1em" };
 
     return (
         <>
-            <div className='position-fixed top-50 start-50 translate-middle'>
-                <h2 className='text-center mb-5'>TODO APP</h2>
-                <table class="table">
-                    <tbody>
-                        {items.map((item, index) => {
-                            return <>
-                                <tr>
-                                    <td class="fs-4 pe-5">
-                                        {item}
-                                    </td>
-                                    <td className="ps-5">
-                                        <button type="button" className="btn btn-warning ms-3" onClick={() => { setItemEdit({ 'item': item, 'index': index }) }}><AiOutlineEdit style={icon_style} /></button>
-                                        <button type="button" className="btn btn-danger ms-3" onClick={() => eliminarItem(index)}><MdOutlineDelete style={icon_style} /></button>
-                                    </td>
-                                </tr>
-                            </>
-                        })}
-                    </tbody>
-                </table>
+            <h2 className='text-center mt-3 mb-5'>TODO APP</h2>
 
-                <div class="input-group mb-3">
-                    <input ref={itemInputRef} type="text" class="form-control" placeholder="Ingrese el item" aria-label="Recipient's username" aria-describedby="button-addon2" />
-                    <button class="btn btn-outline-secondary" type="button" id="button-addon2" onClick={itemEdit.index != null ? editarItem : agregarItem}>{itemEdit.index != null ? 'Editar' : 'Agregar'}</button>
-                </div>
-            </div>
+            <Table
+                className="ms-5 me-5"
+                dataSource={personas.map((persona, index) => {
+                    return { key: index, nombre: persona.nombre, email: persona.email, direccion: persona.direccion }
+                })}
+
+                columns={[
+                    {
+                        title: 'Nombre',
+                        dataIndex: 'nombre'
+                    },
+                    {
+                        title: 'Email',
+                        dataIndex: 'email'
+                    },
+                    {
+                        title: 'Direccion',
+                        dataIndex: 'direccion'
+                    },
+                    {
+                        title: 'Acciones',
+                        render: (record) => <>
+                            <EditOutlined onClick={() => { setPersonaEdit({ 'nombre': record.nombre, 'email': record.email, 'direccion': record.direccion, 'index': record.key }); setIsEditing(true) }} />
+                            <DeleteOutlined onClick={() => eliminarPersona(record.key)} style={{ color: 'red', marginLeft: 12 }} />
+                        </>
+                    },
+                ]}
+                pagination={{ pageSize: 5 }} scroll={{ y: 280 }}
+            />
+
+            <Button className="ms-5" onClick={() => setIsModalVisible(true)} type="primary">Nuevo</Button>
+            <Modal title="Agregar persona" visible={isModalVisible} onCancel={() => { setIsModalVisible(false); setInputRef({ 'nombre': null, 'email': null, 'direccion': null }) }} onOk={isEditing ? editarPersona : agregarPersona}>
+                <Input onChange={(val) => setInputRef(pre => {
+                    return { ...pre, nombre: val.target.value }
+                })} addonBefore="Nombre" placeholder="Ingrese un nombre" className="mb-3" value={inputRef.nombre} />
+
+                <Input onChange={(val) => setInputRef(pre => {
+                    return { ...pre, email: val.target.value }
+                })} addonBefore="Email" placeholder="Ingrese un email" className="mb-3" value={inputRef.email} />
+
+                <Input onChange={(val) => setInputRef(pre => {
+                    return { ...pre, direccion: val.target.value }
+                })} addonBefore="Direccion" placeholder="Ingrese una direccion" value={inputRef.direccion} />
+            </Modal>
         </>
     );
 }
